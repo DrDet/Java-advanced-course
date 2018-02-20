@@ -27,11 +27,11 @@
  * Откомпилируйте решение домашнего задания
  * Запуск простого варианта
 
-        info.kgeorgiy.java.advanced.walk.Tester Walk <полное имя класса>
+        info.kgeorgiy.java.advanced.info.kgeorgiy.java.advanced.walk.Tester Walk <полное имя класса>
 
  * Запуск сложного варианта
 
-        info.kgeorgiy.java.advanced.walk.Tester RecursiveWalk <полное имя класса>
+        info.kgeorgiy.java.advanced.info.kgeorgiy.java.advanced.walk.Tester RecursiveWalk <полное имя класса>
 
  * Обратите внимание, что все скачанные `.jar` файлы должны быть указаны в `CLASSPATH`.
 
