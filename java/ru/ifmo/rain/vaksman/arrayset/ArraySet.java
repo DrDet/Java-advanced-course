@@ -12,20 +12,23 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
     }
 
     public ArraySet(Collection<? extends E> c) {
-        array = new ArrayList<E>(new TreeSet<E>(c));
         comparator = null;
+        array = new ArrayList<E>(new TreeSet<E>(c));
     }
 
     public ArraySet(Collection<? extends E> c, Comparator<? super E> comparator) {
+        this.comparator = comparator;
         TreeSet<E> t = new TreeSet<E>(comparator);
         t.addAll(c);
         array = new ArrayList<E>(t);
-        this.comparator = comparator;
     }
 
     private ArraySet(List<E> list, Comparator<? super E> comparator) {
         array = list;
         this.comparator = comparator;
+        if (list instanceof DescendingList) {
+            ((DescendingList)list).reverse();
+        }
     }
 
     @Override
@@ -40,7 +43,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
 
     @Override
     public NavigableSet<E> descendingSet() {
-        return new ArraySet<E>(array.descendingList(), Collections.reverseOrder(comparator));   //TODO
+        return new ArraySet<E>(new DescendingList<E>(array), Collections.reverseOrder(comparator));
     }
 
     @Override
