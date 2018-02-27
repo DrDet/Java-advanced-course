@@ -12,15 +12,19 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
     }
 
     public ArraySet(Collection<? extends E> c) {
-        comparator = null;
-        array = new ArrayList<E>(new TreeSet<E>(c));
+        this(c, null);
     }
 
     public ArraySet(Collection<? extends E> c, Comparator<? super E> comparator) {
-        this.comparator = comparator;
-        TreeSet<E> t = new TreeSet<E>(comparator);
+//        HashSet<E> t = new HashSet<E>(c);
+//        array = new ArrayList<E>(new HashSet<E>(c));
+//        array.sort(comparator);
+//        this.comparator = comparator;
+
+        Set<E> t = new TreeSet<E>(comparator);
         t.addAll(c);
-        array = new ArrayList<E>(t);
+        array = new ArrayList<>(t);
+        this.comparator = comparator;
     }
 
     private ArraySet(List<E> list, Comparator<? super E> comparator) {
@@ -172,4 +176,27 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
         throw new UnsupportedOperationException();
     }
 
+    private class DescendingList<E> extends AbstractList<E> {
+        private List<E> array;
+        private boolean reverse;
+
+        DescendingList(List<E> array) {
+            this.array = array;
+            reverse = false;
+        }
+
+        @Override
+        public E get(int index) {
+            return (reverse ? array.get(size() - index - 1) : array.get(index));
+        }
+
+        @Override
+        public int size() {
+            return array.size();
+        }
+
+        void reverse() {
+            reverse = !reverse;
+        }
+    }
 }

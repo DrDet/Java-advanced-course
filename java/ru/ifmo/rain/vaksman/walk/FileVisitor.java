@@ -28,7 +28,7 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
             }
         } catch(IOException e) {
             hashValue = 0;
-            System.out.println("Read error in file " + file);
+            System.out.println("Error occurred during reading the following file: " + file + "\nReason: " + e.getMessage());
         } finally {
             writeData(hashValue, file.toString());
         }
@@ -40,6 +40,7 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
             throws IOException
     {
         writeData(0, file.toString());
+        System.out.println("Unable to visit the following file: " + file + "\nReason: " + exc.getMessage());
         return FileVisitResult.CONTINUE;
     }
 
@@ -54,7 +55,7 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
         try {
             writer.write(String.format("%08x", hash) + " " + file + System.lineSeparator());
         } catch (IOException e) {
-            System.out.println("Write error");
+            System.out.println("Unable to write in the output file:\n" + e.getMessage());
         }
     }
 }
