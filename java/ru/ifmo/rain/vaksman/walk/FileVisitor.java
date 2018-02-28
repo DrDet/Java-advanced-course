@@ -2,6 +2,7 @@ package ru.ifmo.rain.vaksman.walk;
 
 import java.io.*;
 import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -17,11 +18,9 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
     }
 
     @Override
-    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
-            throws IOException
-    {
+    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
         int hashValue = 0x811c9dc5;
-        try (InputStream in = new FileInputStream(file.toString())) {
+        try (InputStream in = Files.newInputStream(file)) {
             int t;
             while ((t = in.read(buf)) >= 0) {
                 hashValue = hash(hashValue, buf, t);
@@ -36,9 +35,7 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
     }
 
     @Override
-    public FileVisitResult visitFileFailed(Path file, IOException exc)
-            throws IOException
-    {
+    public FileVisitResult visitFileFailed(Path file, IOException exc) {
         writeData(0, file.toString());
         System.out.println("Unable to visit the following file: " + file + "\nReason: " + exc.getMessage());
         return FileVisitResult.CONTINUE;
