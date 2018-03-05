@@ -16,15 +16,26 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
     }
 
     public ArraySet(Collection<? extends E> c, Comparator<? super E> comparator) {
-//        HashSet<E> t = new HashSet<E>(c);
-//        array = new ArrayList<E>(new HashSet<E>(c));
-//        array.sort(comparator);
+        if (c.isEmpty()) {
+            array = Collections.emptyList();
+        } else {
+            List<E> t = new ArrayList<>(c);
+            t.sort(comparator);
+            array = new ArrayList<>();
+            E prev = t.get(0);
+            array.add(prev);
+            for (int i = 1; i < t.size(); i++) {
+                E next = t.get(i);
+                if (comparator != null ? comparator.compare(prev, next) != 0 : !next.equals(prev)) {
+                    array.add(next);
+                }
+                prev = next;
+            }
+        }
+//        Set<E> t = new TreeSet<E>(comparator);
+//        t.addAll(c);
+//        array = new ArrayList<E>(t);
 //        this.comparator = comparator;
-
-        Set<E> t = new TreeSet<E>(comparator);
-        t.addAll(c);
-        array = new ArrayList<>(t);
-        this.comparator = comparator;
     }
 
     private ArraySet(List<E> list, Comparator<? super E> comparator) {
@@ -47,7 +58,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
 
     @Override
     public NavigableSet<E> descendingSet() {
-        return new ArraySet<E>(new DescendingList<E>(array), Collections.reverseOrder(comparator));
+        return new ArraySet<>(new DescendingList<>(array), Collections.reverseOrder(comparator));
     }
 
     @Override
@@ -64,9 +75,11 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
 
     @Override
     public E last() {
-        if (!isEmpty())
-            return array.get(array.size() - 1);
-        throw new NoSuchElementException();
+        if (isEmpty()) {
+            throw new NoSuchElementException();
+        }
+
+        return array.get(array.size() - 1);
     }
 
     @Override
@@ -84,8 +97,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
         if (idx >= 0) {
             return idx + inOffset;
         }
-        idx = -(idx + 1);
-        return idx + notInOffset;
+        return -(idx + 1) + notInOffset;
     }
 
     private int floorIdx(E e) {
@@ -187,7 +199,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
 
         @Override
         public E get(int index) {
-            return (reverse ? array.get(size() - index - 1) : array.get(index));
+            return array.get(reverse ? size() - index - 1 : index);
         }
 
         @Override
