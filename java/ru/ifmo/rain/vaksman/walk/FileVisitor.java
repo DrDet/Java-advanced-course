@@ -12,7 +12,6 @@ public class FileVisitor extends SimpleFileVisitor<Path> {
     private byte[] buf;
 
     FileVisitor(Writer writer, byte[] buf) {
-        super();
         this.writer = writer;
         this.buf = buf;
     }
