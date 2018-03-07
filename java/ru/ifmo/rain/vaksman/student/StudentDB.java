@@ -41,8 +41,10 @@ public class StudentDB implements StudentGroupQuery {
 
     @Override
     public Set<String> getDistinctFirstNames(List<Student> students) {
-        return getFirstNames(students).stream()
+        return students.stream()
+                .map(Student::getFirstName)
                 .collect(Collectors.toCollection(TreeSet::new));
+
     }
 
     @Override
@@ -62,12 +64,12 @@ public class StudentDB implements StudentGroupQuery {
 
     private List<Student> filteringSortByName(Collection<Student> students, Predicate<Student> predicate) {
         return students.stream()
+                .filter(predicate)
                 .sorted(
                     Comparator.comparing(Student::getLastName)
                         .thenComparing(Student::getFirstName)
                         .thenComparing(Comparator.naturalOrder())
                 )
-                .filter(predicate)
                 .collect(Collectors.toList());
     }
 
@@ -131,9 +133,7 @@ public class StudentDB implements StudentGroupQuery {
 
     @Override
     public List<Group> getGroupsByName(Collection<Student> students) {
-        return getSortedGroupList(students,
-                this::sortStudentsByName
-        );
+        return getSortedGroupList(students, this::sortStudentsByName);
     }
 
     @Override
