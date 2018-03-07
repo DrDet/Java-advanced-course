@@ -3,7 +3,6 @@ package ru.ifmo.rain.vaksman.student;
 import info.kgeorgiy.java.advanced.student.Group;
 import info.kgeorgiy.java.advanced.student.Student;
 import info.kgeorgiy.java.advanced.student.StudentGroupQuery;
-import javafx.util.Pair;
 
 import java.util.*;
 import java.util.function.BinaryOperator;
@@ -42,15 +41,16 @@ public class StudentDB implements StudentGroupQuery {
 
     @Override
     public Set<String> getDistinctFirstNames(List<Student> students) {
-        return new TreeSet<>(getFirstNames(students));
+        return getFirstNames(students).stream()
+                .collect(Collectors.toCollection(TreeSet::new));
     }
 
     @Override
     public String getMinStudentFirstName(List<Student> students) {
         return students.stream()
                 .min(Comparator.naturalOrder())
-                .get()//orElseThrow(NoSuchElementException::new)
-                .getFirstName();
+                .map(Student::getFirstName)
+                .orElse("");
     }
 
     @Override
@@ -62,12 +62,12 @@ public class StudentDB implements StudentGroupQuery {
 
     private List<Student> filteringSortByName(Collection<Student> students, Predicate<Student> predicate) {
         return students.stream()
-                .filter(predicate)
                 .sorted(
                     Comparator.comparing(Student::getLastName)
                         .thenComparing(Student::getFirstName)
                         .thenComparing(Comparator.naturalOrder())
                 )
+                .filter(predicate)
                 .collect(Collectors.toList());
     }
 
@@ -106,51 +106,50 @@ public class StudentDB implements StudentGroupQuery {
                 );
     }
 
-    @Override
-    public List<Group> getGroupsByName(Collection<Student> students) {
+    private Stream<Map.Entry<String, List<Student>>> getEntryStream(Collection<Student> students) {
         return students.stream()
                 .collect(Collectors.groupingBy(Student::getGroup)) // String -> List<Student>
                 .entrySet()
-                    .stream()
-                    .map(e -> new Group(e.getKey(), sortStudentsByName(e.getValue())))
-                    .sorted(Comparator.comparing(Group::getName))
-                    .collect(Collectors.toList());
+                .stream();
     }
 
-    @Override
-    public List<Group> getGroupsById(Collection<Student> students) {
-        return students.stream()
-                .collect(Collectors.groupingBy(Student::getGroup)) // String -> List<Student>
-                .entrySet()
-                .stream()
-                .map(e -> new Group(e.getKey(), sortStudentsById(e.getValue())))
+    private List<Group> getSortedGroupList(Collection<Student> students, Function<List<Student>, List<Student>> sorter) {
+        return getEntryStream(students)
+                .map(e -> new Group(e.getKey(), sorter.apply(e.getValue())))
                 .sorted(Comparator.comparing(Group::getName))
                 .collect(Collectors.toList());
     }
 
+    private String getMaxGroup(Collection<Student> students, Function<List<Student>, Integer> counter) {
+        return getEntryStream(students)
+                .max(Comparator
+                        .comparingInt((Map.Entry<String, List<Student>> e) -> counter.apply(e.getValue()))
+                        .thenComparing(Map.Entry::getKey, Comparator.reverseOrder()))
+                .map(Map.Entry::getKey)
+                .orElse("");
+    }
+
+    @Override
+    public List<Group> getGroupsByName(Collection<Student> students) {
+        return getSortedGroupList(students,
+                this::sortStudentsByName
+        );
+    }
+
+    @Override
+    public List<Group> getGroupsById(Collection<Student> students) {
+        return getSortedGroupList(students,
+                this::sortStudentsById
+        );
+    }
+
     @Override
     public String getLargestGroup(Collection<Student> students) {
-        return students.stream()
-                .collect(Collectors.groupingBy(Student::getGroup)) // String -> List<Student>
-                .entrySet()
-                .stream()
-                .max(Comparator
-                        .comparingInt((Map.Entry<String, List<Student>> e) -> e.getValue().size())
-                        .thenComparing(Map.Entry::getKey, Comparator.reverseOrder()))
-                .get()
-                .getKey();
+        return getMaxGroup(students, List::size);
     }
 
     @Override
     public String getLargestGroupFirstName(Collection<Student> students) {
-        return students.stream()
-                .collect(Collectors.groupingBy(Student::getGroup)) // String -> List<Student>
-                .entrySet()
-                .stream()
-                .max(Comparator
-                        .comparingInt((Map.Entry<String, List<Student>> e) -> getDistinctFirstNames(e.getValue()).size())
-                        .thenComparing(Map.Entry::getKey, Comparator.reverseOrder()))
-                .get()
-                .getKey();
+        return getMaxGroup(students, s -> getDistinctFirstNames(s).size());
     }
 }
