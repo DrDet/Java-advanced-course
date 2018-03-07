@@ -87,6 +87,7 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
         return comparator;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public boolean contains(Object o) {
         return Collections.binarySearch(array, (E)o, comparator) >= 0;
