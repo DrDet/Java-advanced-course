@@ -12,13 +12,13 @@ public class CodeGenerator {
     private String tab;
     private String className;
 
-    public CodeGenerator(String newLine, String tab) {
+    public CodeGenerator(String className, String newLine, String tab) {
+        this.className = className;
         this.newLine = newLine;
         this.tab = tab;
     }
 
     public String generateClassDeclaration(Class<?> clazz) {
-        className = clazz.getSimpleName() + "Impl";
         return "package " + clazz.getPackage().getName() + ";" + newLine + newLine
                 + "public class " + className + " " + (clazz.isInterface() ? "implements" : "extends") + " " + clazz.getCanonicalName() + " {" + newLine;
     }
@@ -28,14 +28,14 @@ public class CodeGenerator {
     }
 
     public String generateMethod(Executable m, boolean isConstructor) {
-        return  modifiers(m) + " "
+        return  tab + modifiers(m) + " "
                 + (!isConstructor ? retType((Method) m) + " " : "")
                 + name(m, isConstructor)
                 + "(" + parameters(m) + ") "
                 + exceptions(m)
                 + " {" + newLine
-                + body(m, isConstructor)
-                + "}"
+                + tab + tab + body(m, isConstructor) + newLine
+                + tab + "}"
                 + newLine + newLine;
     }
 
