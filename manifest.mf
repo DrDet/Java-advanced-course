@@ -1,0 +1,3 @@
+Manifest-Version: 1.0
+Created-By: Denis Vaksman
+Main-Class: ru.ifmo.rain.vaksman.implementor.Implementor
