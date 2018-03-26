@@ -30,8 +30,8 @@ public class CodeGenerator {
      * Constructs CodeGenerator instance with given characters.
      *
      * @param className name of implemented class
-     * @param newLine new line character
-     * @param tab tab character
+     * @param newLine string representation of new line character
+     * @param tab string representation of tab character
      */
     public CodeGenerator(String className, String newLine, String tab) {
         this.className = className;
@@ -40,7 +40,7 @@ public class CodeGenerator {
     }
 
     /**
-     * Generates declaration of given class, e.g. package description
+     * Generates declaration of given class, e.g. package description (in case it isn't Null)
      * and first line of defining java class, which contains modifiers, name, implemented interfaces and superclasses.
      *
      * @param clazz class to generate declaration for
@@ -62,7 +62,7 @@ public class CodeGenerator {
     /**
      * Generates implementation of given method or constructor.
      *
-     * @param m given method or constructor to implement
+     * @param m method or constructor to implement
      * @param name name of given method or constructor
      * @param retType return type of given method or empty string for constructor
      * @param body body to generate
@@ -83,7 +83,7 @@ public class CodeGenerator {
     /**
      * Generates body of given method.
      *
-     * @param m given method to implement
+     * @param m method to implement
      * @return string representation of body
      */
     private String body(Method m) {
@@ -94,7 +94,7 @@ public class CodeGenerator {
     /**
      * Generates body of given constructor.
      *
-     * @param c given constructor to implement
+     * @param c constructor to implement
      * @return string representation of body
      */
     private String body(Constructor<?> c) {
@@ -109,7 +109,7 @@ public class CodeGenerator {
     /**
      * Generates implementation of given method.
      *
-     * @param m given method or constructor to implement
+     * @param m method or constructor to implement
      * @return string representation of method code
      */
     public String generateMethod(Method m) {
@@ -119,7 +119,7 @@ public class CodeGenerator {
     /**
      * Generates implementation of given constructor.
      *
-     * @param c given constructor to implement
+     * @param c constructor to implement
      * @return string representation of constructor code
      */
     public String generateConstructor(Constructor<?> c) {

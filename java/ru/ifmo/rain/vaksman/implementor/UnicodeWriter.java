@@ -5,7 +5,9 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 
 /**
- * This class provides method to write string in Unicode encoding.
+ * This class provides {@link #write(String)} method to write string in Unicode encoding.
+ *
+ * @author Denis Vaksman
  */
 public class UnicodeWriter extends OutputStreamWriter {
 

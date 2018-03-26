@@ -9,10 +9,8 @@ import java.io.*;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
@@ -23,8 +21,8 @@ import java.util.zip.ZipEntry;
 
 /**
  *  Implementation of {@link JarImpler}.
- *  This class provides methods to generate source code of given type token
- *  and create jar file, which contains it.
+ *  This class provides methods for generating source code of given type token
+ *  and creating jar file containing it.
  *
  *  @author Denis Vaksman
  */
@@ -34,6 +32,13 @@ public class Implementor implements JarImpler {
      * Full path of source file to generate.
      */
     private Path srcFile;
+
+    /**
+     * Constructs default implementor instance.
+     */
+    public Implementor() {
+        srcFile = null;
+    }
 
     @Override
     public void implementJar(Class<?> token, Path jarFile) throws ImplerException {
@@ -63,6 +68,11 @@ public class Implementor implements JarImpler {
             throw new ImplerException("Couldn't create jar file", e);
         } catch (InvalidPathException e) {
             throw new ImplerException("Given jar path is incorrect", e);
+        }
+        try {
+            clean(tmpDir);
+        } catch (IOException e) {
+            throw new ImplerException("Couldn't delete temp directory", e);
         }
     }
 
@@ -148,7 +158,7 @@ public class Implementor implements JarImpler {
      * @param token type token to generate source file for
      * @param root path of root directory to contain root package of given token
      * @throws IOException
-     *         If error during created directories is occurred
+     *         If error during creating directories occurred
      */
     private void createFile(Class<?> token, Path root) throws IOException {
         srcFile = root.resolve(token.getCanonicalName().replace(".", File.separator) + "Impl.java");
@@ -201,5 +211,32 @@ public class Implementor implements JarImpler {
         } catch (ClassNotFoundException e) {
             System.out.println("Couldn't find given type:\n" + e.getMessage());
         }
+    }
+
+    /**
+     * Recursively deletes directory or file according to given {@link Path}
+     *
+     * @param root path of directory or file to delete
+     * @throws IOException
+     *          if an error during deleting occurred
+     */
+    private void clean(final Path root) throws IOException {
+        SimpleFileVisitor<Path> cleaner = new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) throws IOException {
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(final Path dir, final IOException exc) throws IOException {
+                Files.delete(dir);
+                return FileVisitResult.CONTINUE;
+            }
+        };
+        if (!Files.exists(root)) {
+            return;
+        }
+        Files.walkFileTree(root, cleaner);
     }
 }
