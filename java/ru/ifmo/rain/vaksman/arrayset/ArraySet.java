@@ -32,18 +32,17 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
                 prev = next;
             }
         }
-//        Set<E> t = new TreeSet<E>(comparator);
-//        t.addAll(c);
-//        array = new ArrayList<E>(t);
-//        this.comparator = comparator;
+        this.comparator = comparator;
     }
 
     private ArraySet(List<E> list, Comparator<? super E> comparator) {
         array = list;
         this.comparator = comparator;
-        if (list instanceof DescendingList) {
-            ((DescendingList)list).reverse();
-        }
+    }
+
+    private ArraySet(Comparator<? super E> c) {
+        array = Collections.emptyList();
+        comparator = c;
     }
 
     @Override
@@ -146,21 +145,21 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
         int l = (fromInclusive ? ceilIdx(fromElement) : higherIdx(fromElement));
         int r = (toInclusive ? floorIdx(toElement) : lowerIdx(toElement));
         if (l > r || l == -1 || r == -1)
-            return new ArraySet<>();
-        return new ArraySet<E>(array.subList(l, r + 1), comparator);
+            return new ArraySet<>(comparator);
+        return new ArraySet<>(array.subList(l, r + 1), comparator);
     }
 
     @Override
     public NavigableSet<E> headSet(E toElement, boolean inclusive) {
         if (isEmpty())
-            return new ArraySet<E>();
+            return new ArraySet<>(comparator);
         return subSet(first(), true, toElement, inclusive);
     }
 
     @Override
     public NavigableSet<E> tailSet(E fromElement, boolean inclusive) {
         if (isEmpty())
-            return new ArraySet<E>();
+            return new ArraySet<>(comparator);
         return subSet(fromElement, inclusive, last(), true);
     }
 
@@ -189,27 +188,28 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
         throw new UnsupportedOperationException();
     }
 
-    private class DescendingList<E> extends AbstractList<E> {
-        private List<E> array;
+    private class DescendingList<T> extends AbstractList<T> {
+        private List<T> array;
         private boolean reverse;
 
-        DescendingList(List<E> array) {
-            this.array = array;
-            reverse = false;
+        private DescendingList(List<T> list) {
+            if (list instanceof DescendingList) {
+                array = ((DescendingList<T>) list).array;
+                reverse = !((DescendingList<T>) list).reverse;
+            } else {
+                array = list;
+                reverse = true;
+            }
         }
 
         @Override
-        public E get(int index) {
+        public T get(int index) {
             return array.get(reverse ? size() - index - 1 : index);
         }
 
         @Override
         public int size() {
             return array.size();
-        }
-
-        void reverse() {
-            reverse = !reverse;
         }
     }
 }
