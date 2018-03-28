@@ -3,8 +3,8 @@ package ru.ifmo.rain.vaksman.arrayset;
 import java.util.*;
 
 public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
-    private List<E> array;
-    private Comparator<? super E> comparator;
+    private final List<E> array;
+    private final Comparator<? super E> comparator;
 
     public ArraySet() {
         array = Collections.emptyList();
@@ -67,9 +67,10 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
 
     @Override
     public E first() {
-        if (!isEmpty())
-            return array.get(0);
-        throw new NoSuchElementException();
+        if (isEmpty()) {
+            throw new NoSuchElementException();
+        }
+        return array.get(0);
     }
 
     @Override
@@ -152,14 +153,14 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
     @Override
     public NavigableSet<E> headSet(E toElement, boolean inclusive) {
         if (isEmpty())
-            return new ArraySet<>(comparator);
+            return this;
         return subSet(first(), true, toElement, inclusive);
     }
 
     @Override
     public NavigableSet<E> tailSet(E fromElement, boolean inclusive) {
         if (isEmpty())
-            return new ArraySet<>(comparator);
+            return this;
         return subSet(fromElement, inclusive, last(), true);
     }
 
@@ -194,8 +195,9 @@ public class ArraySet<E> extends AbstractSet<E> implements NavigableSet<E>{
 
         private DescendingList(List<T> list) {
             if (list instanceof DescendingList) {
-                array = ((DescendingList<T>) list).array;
-                reverse = !((DescendingList<T>) list).reverse;
+                DescendingList<T> descendingList = (DescendingList<T>) list;
+                array = descendingList.array;
+                reverse = !descendingList.reverse;
             } else {
                 array = list;
                 reverse = true;
