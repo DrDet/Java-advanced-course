@@ -141,14 +141,19 @@ public class Implementor implements JarImpler {
      *
      * @param src - full name of source file.
      * @param root - root full name.
+     * @throws ImplerException
+     *          If error during getting java compiler occurred
      */
-    private void compile(Path src, Path root) {
+    private void compile(Path src, Path root) throws ImplerException {
         final JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        final String[] args = new String[3];
-        args[0] = src.toAbsolutePath().toString();
-        args[1] = "-cp";
-        args[2] = root.toString() + File.pathSeparator + System.getProperty("java.class.path");
-        compiler.run(null, null, null, args);
+        if (compiler == null) {
+            throw new ImplerException("Couldn't get java compiler");
+        }
+        compiler.run(null, null, null,
+                src.toAbsolutePath().toString(),
+                "-cp",
+                root.toString() + File.pathSeparator + System.getProperty("java.class.path")
+        );
     }
 
     /**
@@ -221,7 +226,7 @@ public class Implementor implements JarImpler {
      *          if an error during deleting occurred
      */
     private void clean(final Path root) throws IOException {
-        SimpleFileVisitor<Path> cleaner = new SimpleFileVisitor<Path>() {
+        SimpleFileVisitor<Path> cleaner = new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) throws IOException {
                 Files.delete(file);

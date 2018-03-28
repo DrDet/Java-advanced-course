@@ -46,7 +46,8 @@ public class CodeGenerator {
      * @param clazz class to generate declaration for
      * @return {@link String} representation of declaration
      */
-    public String generateClassDeclaration(Class<?> clazz) {
+    public String
+    generateClassDeclaration(Class<?> clazz) {
         return (clazz.getPackage() != null ? "package " + clazz.getPackage().getName() + ";" + newLine + newLine : "")
                 + "public class " + className + " " + (clazz.isInterface() ? "implements" : "extends") + " " + clazz.getCanonicalName() + " {" + newLine;
     }
@@ -81,39 +82,13 @@ public class CodeGenerator {
     }
 
     /**
-     * Generates body of given method.
-     *
-     * @param m method to implement
-     * @return string representation of body
-     */
-    private String body(Method m) {
-        return tab + "return "
-                + getDefaultValue(m.getReturnType()) + ";";
-    }
-
-    /**
-     * Generates body of given constructor.
-     *
-     * @param c constructor to implement
-     * @return string representation of body
-     */
-    private String body(Constructor<?> c) {
-        return tab + "super("
-                + String.join(", ",
-                Arrays.stream(c.getParameters())
-                        .map(Parameter::getName)
-                        .collect(Collectors.toList()))
-                + ");";
-    }
-
-    /**
      * Generates implementation of given method.
      *
      * @param m method or constructor to implement
      * @return string representation of method code
      */
     public String generateMethod(Method m) {
-        return generate(m, m.getName(), retType(m), body(m));
+        return generate(m, m.getName(), retType(m), tab + "return " + getDefaultValue(m.getReturnType()) + ";");
     }
 
     /**
@@ -123,7 +98,13 @@ public class CodeGenerator {
      * @return string representation of constructor code
      */
     public String generateConstructor(Constructor<?> c) {
-        return generate(c, className,"", body(c));
+        return generate(c, className,"", tab + "super("
+                                                                + String.join(", ",
+                                                                        Arrays.stream(c.getParameters())
+                                                                                .map(Parameter::getName)
+                                                                                .collect(Collectors.toList()))
+                                                                        + ");"
+        );
     }
 
     /**
@@ -183,20 +164,20 @@ public class CodeGenerator {
      */
     private String getDefaultValue(Class<?> clazz) {
         String typeName = clazz.getCanonicalName();
-        if (typeName.equals("byte") || typeName.equals("short") || typeName.equals("int"))
-            return "0";
-        if (typeName.equals("long"))
-            return "0L";
-        if (typeName.equals("char"))
-            return "'\u0000'";
-        if (typeName.equals("float"))
-            return "0.0F";
-        if (typeName.equals("double"))
-            return "0.0";
-        if (typeName.equals("boolean"))
-            return "false";
-        if (typeName.equals("void"))
-            return "";
-        return "null";
+        switch (typeName) {
+            case "byte":
+            case "short":
+            case "int":
+            case "long":
+            case "float":
+            case "double":
+                return "0";
+            case "boolean":
+                return "false";
+            case "void":
+                return "";
+            default:
+                return "null";
+        }
     }
 }
