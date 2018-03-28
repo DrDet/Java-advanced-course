@@ -6,6 +6,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class IterativeParallelism implements ListIP {
 
@@ -13,9 +14,9 @@ public class IterativeParallelism implements ListIP {
         private List<? extends T> list;
         private List<R> dst;
         private int idx;
-        private Function<List<? extends T>, R> calc;
+        private Function<Stream<? extends T>, R> calc;
 
-        Calculate(List<? extends T> list, List<R> dst, int idx, Function<List<? extends T>, R> calc) {
+        Calculate(List<? extends T> list, List<R> dst, int idx, Function<Stream<? extends T>, R> calc) {
             this.list = list;
             this.dst = dst;
             this.idx = idx;
@@ -24,89 +25,107 @@ public class IterativeParallelism implements ListIP {
 
         @Override
         public void run() {
-            dst.set(idx, calc.apply(list));
+            dst.set(idx, calc.apply(list.stream()));
         }
     }
 
-    private <T, R> R parallelCalc(int cnt, List<? extends T> values, Function<List<? extends T>, R> threadCalc, Function<List<R>, R> merge) throws InterruptedException {
-        int size = values.size() / cnt;
-        if (size == 0) {
-            size = 1;
+    private void checkForNull(Object x) {
+        if (x == null) {
+            throw new IllegalArgumentException("One of given argument is null");
+        }
+    }
+
+    private <T, R> R parallelCalc(int cnt, List<? extends T> values, Function<Stream<? extends T>, R> threadCalc, Function<Stream<R>, R> merge) throws InterruptedException {
+        if (cnt <= 0 || values == null) {
+            throw new IllegalArgumentException("Incorrect amount of threads or given list is null");
+        }
+        int blockSize = values.size() / cnt;
+        int extra = values.size() % cnt;
+        if (blockSize == 0) {
             cnt = values.size();
+            blockSize = 1;
+            extra = 0;
         }
         Thread[] threads = new Thread[cnt];
-        List<R> tmp = new ArrayList<>();
-        for (int i = 0; i < cnt; ++i) {
-            tmp.add(null);
-        }
-        for (int i = 0; i < cnt; ++i) {
+        List<R> tmp = new ArrayList<>(Collections.nCopies(cnt, null));
+        for (int i = 0, l = 0, curSize; i < cnt; i++) {
+            curSize = blockSize;
+            if (extra > 0) {
+                curSize++;
+                extra--;
+            }
             threads[i] = new Thread(new Calculate<>(
-                                            values.subList(i * size, i != cnt - 1 ? i * size + size : values.size()),
+                                            values.subList(l, l + curSize),
                                             tmp, i,
                                             threadCalc
                                         )
             );
+            l += curSize;
             threads[i].start();
         }
         for (Thread th : threads) {
-            th.join();
+            th.join();              //TODO: to process interrupted exception
         }
-        return merge.apply(tmp);
+        return merge.apply(tmp.stream());
     }
 
     @Override
     public <T> T maximum(int cnt, List<? extends T> values, Comparator<? super T> comparator) throws InterruptedException {
         return parallelCalc(cnt, values,
-                            (List<? extends T> l) -> l.stream().max(Comparator.nullsFirst(comparator)).orElse(null),
-                            (List<T> l) -> l.stream().max(Comparator.nullsFirst(comparator)).orElse(null)
+                            s -> s.max(Comparator.nullsFirst(comparator)).orElse(null),
+                            s -> s.max(Comparator.nullsFirst(comparator)).orElse(null)
                         );
     }
 
     @Override
     public <T> T minimum(int cnt, List<? extends T> values, Comparator<? super T> comparator) throws InterruptedException {
         return parallelCalc(cnt, values,
-                            (List<? extends T> l) -> l.stream().min(Comparator.nullsLast(comparator)).orElse(null),
-                            (List<T> l) -> l.stream().min(Comparator.nullsLast(comparator)).orElse(null)
+                            s -> s.min(Comparator.nullsLast(comparator)).orElse(null),
+                            s -> s.min(Comparator.nullsLast(comparator)).orElse(null)
                         );
     }
 
     @Override
     public <T> boolean all(int cnt, List<? extends T> values, Predicate<? super T> predicate) throws InterruptedException {
+        checkForNull(predicate);
         return parallelCalc(cnt, values,
-                            l -> l.stream().allMatch(predicate),
-                            l -> l.stream().allMatch((x) -> x.equals(true))
+                            s -> s.allMatch(predicate),
+                            s -> s.allMatch((x) -> x.equals(true))
                         );
     }
 
     @Override
     public <T> boolean any(int cnt, List<? extends T> values, Predicate<? super T> predicate) throws InterruptedException {
+        checkForNull(predicate);
         return parallelCalc(cnt, values,
-                            l -> l.stream().anyMatch(predicate),
-                            l -> l.stream().anyMatch((x) -> x.equals(true))
+                            s -> s.anyMatch(predicate),
+                            s -> s.anyMatch(x -> x)
                         );
     }
 
     @Override
     public String join(int cnt, List<?> values) throws InterruptedException {
         return parallelCalc(cnt, values,
-                            l -> l.stream().map(x -> x == null ? "" : x.toString()).collect(Collectors.joining()),
-                            l -> l.stream().collect(Collectors.joining())
+                            s -> s.map(x -> x == null ? "" : x.toString()).collect(Collectors.joining()),
+                            s -> s.collect(Collectors.joining())
                         );
     }
 
     @Override
     public <T> List<T> filter(int cnt, List<? extends T> values, Predicate<? super T> predicate) throws InterruptedException {
+        checkForNull(predicate);
         return parallelCalc(cnt, values,
-                                l -> l.stream().filter(predicate).collect(Collectors.toList()),
-                                l -> l.stream().flatMap(Collection::stream).collect(Collectors.toList())
+                                s -> s.filter(predicate).collect(Collectors.toList()),
+                                s -> s.flatMap(Collection::stream).collect(Collectors.toList())
                         );
     }
 
     @Override
     public <T, U> List<U> map(int cnt, List<? extends T> values, Function<? super T, ? extends U> f) throws InterruptedException {
+        checkForNull(f);
         return parallelCalc(cnt, values,
-                                l -> l.stream().map(f).collect(Collectors.toList()),
-                                l -> l.stream().flatMap(Collection::stream).collect(Collectors.toList())
+                                s -> s.map(f).collect(Collectors.toList()),
+                                s -> s.flatMap(Collection::stream).collect(Collectors.toList())
                         );
     }
 }
