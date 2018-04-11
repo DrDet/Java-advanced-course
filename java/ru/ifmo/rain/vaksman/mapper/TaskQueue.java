@@ -16,7 +16,7 @@ public class TaskQueue {
             wait();
         }
         Task task = tasks.poll();
-        notify();
+        notifyAll();
         return task;
     }
 
@@ -25,6 +25,6 @@ public class TaskQueue {
             wait();
         }
         tasks.add(task);
-        notify();
+        notifyAll();
     }
 }

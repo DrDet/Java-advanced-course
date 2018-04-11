@@ -4,6 +4,8 @@ import info.kgeorgiy.java.advanced.mapper.ParallelMapper;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ParallelMapperImpl implements ParallelMapper {
     private final TaskQueue tasks;
@@ -13,12 +15,24 @@ public class ParallelMapperImpl implements ParallelMapper {
         if (cnt <= 0) {
             throw new IllegalArgumentException("Incorrect amount of threads to create");
         }
+        cnt = Integer.min(cnt, Runtime.getRuntime().availableProcessors());
         tasks = new TaskQueue();
-        threads = new ArrayList<>();
-        for (int i = 0; i < cnt; ++i) {
-            threads.add(new Thread(new Worker(tasks)));
-            threads.get(i).start();
-        }
+        Runnable worker = () -> {
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
+                    Task task = tasks.getTask();
+                    task.execute();
+                }
+            } catch (InterruptedException ignored) {
+            } finally {
+                Thread.currentThread().interrupt();
+            }
+        };
+        threads = Stream.generate(() -> worker)
+                .limit(cnt)
+                .map(Thread::new)
+                .collect(Collectors.toList());
+        threads.forEach(Thread::start);
     }
 
     @Override
@@ -44,26 +58,6 @@ public class ParallelMapperImpl implements ParallelMapper {
             try {
                 th.join();
             } catch (InterruptedException ignored) {
-            }
-        }
-    }
-
-    private class Worker implements Runnable {
-        private final TaskQueue tasks;
-
-        private Worker(TaskQueue tasks) {
-            this.tasks = tasks;
-        }
-
-        @Override
-        public void run() {
-            try {
-                while (!Thread.currentThread().isInterrupted()) {
-                    Task task = tasks.getTask();
-                    task.execute();
-                }
-            } catch (InterruptedException ignored) {
-            } finally {
                 Thread.currentThread().interrupt();
             }
         }

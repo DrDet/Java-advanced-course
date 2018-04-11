@@ -20,11 +20,9 @@ public class Task<T, R> {
 
     public void execute() {
         dstL.set(dstI, f.apply(arg));
-        manager.count();
         synchronized (manager) {
-            if (manager.isDone()) {
-                manager.notify();
-            }
+            manager.done();
         }
     }
+
 }

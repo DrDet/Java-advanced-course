@@ -7,17 +7,20 @@ class TaskManager {
         remain = cntTasks;
     }
 
-    synchronized void count() {
-        remain--;
-    }
-
-    boolean isDone() {
+    private boolean isDone() {
         return remain == 0;
     }
 
     synchronized void waitForResult() throws InterruptedException {
         while (!isDone()) {
             wait();
+        }
+    }
+
+    synchronized void done() {
+        remain--;
+        if (isDone()) {
+            notify();
         }
     }
 }

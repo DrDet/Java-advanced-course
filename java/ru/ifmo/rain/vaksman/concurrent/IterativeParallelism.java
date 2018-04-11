@@ -63,6 +63,7 @@ public class IterativeParallelism implements ListIP {
         if (cnt <= 0 || values == null) {
             throw new IllegalArgumentException("Incorrect amount of threads or given list is null");
         }
+        cnt = Integer.min(cnt, Runtime.getRuntime().availableProcessors());
         cnt = Integer.min(cnt, values.size());
         List<List<? extends T>> parts = splitList(cnt, values);
         List<R> tmp;
@@ -75,8 +76,8 @@ public class IterativeParallelism implements ListIP {
             }
             joinAll(threads);
         } else {
-            tmp = mapper.map(threadCalc,
-                                parts.stream().map(Collection::stream).collect(Collectors.toList()));
+            List<? extends Stream<? extends T>> collect = parts.stream().map(Collection::stream).collect(Collectors.toList());
+            tmp = mapper.map(threadCalc, collect);
         }
         return merge.apply(tmp.stream());
     }
