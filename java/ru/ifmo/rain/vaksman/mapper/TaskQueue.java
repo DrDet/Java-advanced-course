@@ -5,22 +5,22 @@ import java.util.Queue;
 
 public class TaskQueue {
     private static final int MAX_SIZE = 1_000_000;
-    private final Queue<Task> tasks;
+    private final Queue<Runnable> tasks;
 
     public TaskQueue() {
         this.tasks = new LinkedList<>();
     }
 
-    public synchronized Task getTask() throws InterruptedException {
+    public synchronized Runnable getTask() throws InterruptedException {
         while (tasks.isEmpty()) {
             wait();
         }
-        Task task = tasks.poll();
+        Runnable task = tasks.poll();
         notifyAll();
         return task;
     }
 
-    public synchronized void putTask(Task task) throws InterruptedException {
+    public synchronized void putTask(Runnable task) throws InterruptedException {
         while (tasks.size() == MAX_SIZE) {
             wait();
         }

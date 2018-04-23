@@ -20,8 +20,8 @@ public class ParallelMapperImpl implements ParallelMapper {
         Runnable worker = () -> {
             try {
                 while (!Thread.currentThread().isInterrupted()) {
-                    Task task = tasks.getTask();
-                    task.execute();
+                    Runnable task = tasks.getTask();
+                    task.run();
                 }
             } catch (InterruptedException ignored) {
             } finally {

@@ -1,9 +1,9 @@
 package ru.ifmo.rain.vaksman.mapper;
 
-class TaskManager {
+public class TaskManager {
     private int remain;
 
-    TaskManager(int cntTasks) {
+    public TaskManager(int cntTasks) {
         remain = cntTasks;
     }
 
@@ -11,13 +11,13 @@ class TaskManager {
         return remain == 0;
     }
 
-    synchronized void waitForResult() throws InterruptedException {
+    public synchronized void waitForResult() throws InterruptedException {
         while (!isDone()) {
             wait();
         }
     }
 
-    synchronized void done() {
+    public synchronized void done() {
         remain--;
         if (isDone()) {
             notify();

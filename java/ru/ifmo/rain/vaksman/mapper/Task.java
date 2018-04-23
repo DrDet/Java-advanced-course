@@ -3,7 +3,7 @@ package ru.ifmo.rain.vaksman.mapper;
 import java.util.List;
 import java.util.function.Function;
 
-public class Task<T, R> {
+public class Task<T, R> implements Runnable {
     private final Function<? super T, ? extends R> f;
     private final T arg;
     private final List<R> dstL;
@@ -18,7 +18,8 @@ public class Task<T, R> {
         this.manager = manager;
     }
 
-    public void execute() {
+    @Override
+    public void run() {
         dstL.set(dstI, f.apply(arg));
         synchronized (manager) {
             manager.done();
