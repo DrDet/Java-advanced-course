@@ -1,2 +1,0 @@
-javac -cp artifacts\JarImplementorTest.jar -Xlint java\ru\ifmo\rain\vaksman\implementor\Implementor.java java\ru\ifmo\rain\vaksman\implementor\CodeGenerator.java java\ru\ifmo\rain\vaksman\implementor\UnicodeWriter.java
-java -cp artifacts\JarImplementorTest.jar;lib\*;java\;.    info.kgeorgiy.java.advanced.implementor.Tester jar-class ru.ifmo.rain.vaksman.implementor.Implementor %1
