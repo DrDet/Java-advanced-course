@@ -19,6 +19,10 @@ public class HelloUDPServer implements HelloServer {
 
     @Override
     public void start(int port, int threads) {
+        if (threads <= 0 || port < 0 || port > 65535) {
+            throw new IllegalArgumentException("Amount of threads or port's number is incorrect");
+        }
+        threads = Integer.min(threads, Runtime.getRuntime().availableProcessors());
         try {
             socket = new DatagramSocket(port);
         } catch (SocketException e) {
@@ -40,14 +44,7 @@ public class HelloUDPServer implements HelloServer {
 
     @Override
     public void close() {
-        receivers.shutdown();
-        try {
-            if (!receivers.awaitTermination(800, TimeUnit.MILLISECONDS)) {
-                receivers.shutdownNow();
-            }
-        } catch (InterruptedException e) {
-            receivers.shutdownNow();
-        }
+        receivers.shutdownNow();
         socket.close();
     }
 
@@ -86,8 +83,8 @@ public class HelloUDPServer implements HelloServer {
     }
 
     public static void main(String[] args) {
-        if (args == null || Arrays.stream(args).anyMatch(Objects::isNull)) {
-            throw new IllegalArgumentException("One of given argument is null");
+        if (args == null || args.length != 2 || Arrays.stream(args).anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException("Incorrect input format.\nUsage: HelloUDPServer <port number> <threads number>");
         }
         int port, threads;
         try {
@@ -98,10 +95,6 @@ public class HelloUDPServer implements HelloServer {
             exception.addSuppressed(e);
             throw exception;
         }
-        if (threads <= 0 || port < 0 || port > 65535) {
-            throw new IllegalArgumentException("Amount of threads or port's number is incorrect");
-        }
-        threads = Integer.min(threads, Runtime.getRuntime().availableProcessors());
         new HelloUDPServer().start(port, threads);
     }
 }
