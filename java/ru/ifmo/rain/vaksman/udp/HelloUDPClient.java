@@ -68,14 +68,12 @@ public class HelloUDPClient implements HelloClient {
                     do {
                         try {
                             sendQuery(serverAddress, query);
-                        System.err.println(Thread.currentThread().getName() + " ??? " + query);
                             reply = receiveReply();
-                        System.err.println(Thread.currentThread().getName() + " !!! " + reply);
                         } catch (IOException e) {
                             System.err.println("Couldn't process the query: " + e.getMessage() + "\nTrying again...");
                         }
                     } while (reply.isEmpty() || !isProcessed(query, reply));
-                    System.err.println(reply);
+                    System.out.println(reply);
                 }
             } catch (SocketException e) {
                 System.err.println("Socket error occurred: " + e.getMessage());
