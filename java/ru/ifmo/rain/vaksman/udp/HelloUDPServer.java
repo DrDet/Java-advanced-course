@@ -4,16 +4,16 @@ import info.kgeorgiy.java.advanced.hello.HelloServer;
 
 import java.io.IOException;
 import java.net.*;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class HelloUDPServer implements HelloServer {
     private DatagramSocket socket;
-    private ExecutorService receivers;
+    private ExecutorService workers;
+    private ExecutorService listener;
     private int receiveBufferSize;
     private int sendBufferSize;
 
@@ -22,7 +22,6 @@ public class HelloUDPServer implements HelloServer {
         if (threads <= 0 || port < 0 || port > 65535) {
             throw new IllegalArgumentException("Amount of threads or port's number is incorrect");
         }
-        threads = Integer.min(threads, Runtime.getRuntime().availableProcessors());
         try {
             socket = new DatagramSocket(port);
         } catch (SocketException e) {
@@ -36,40 +35,47 @@ public class HelloUDPServer implements HelloServer {
             System.err.println("UDP error occurred: " + e.getMessage());
             return;
         }
-        receivers = Executors.newFixedThreadPool(threads);
-        for (int i = 0; i < threads; i++) {
-            receivers.submit(new Receiver());
-        }
+        listener = Executors.newSingleThreadExecutor();
+        workers = Executors.newFixedThreadPool(threads);
+        listener.submit(this::listen);
     }
 
     @Override
     public void close() {
-        receivers.shutdownNow();
+        workers.shutdownNow();
+        listener.shutdownNow();
         socket.close();
     }
 
-    private class Receiver implements Runnable {
-        @Override
-        public void run() {
-            while (!Thread.currentThread().isInterrupted()) {
-                try {
-                    DatagramPacket query = getQuery();
-                    String replyMessage = "Hello, " + (new String(query.getData(), 0, query.getLength()));
-                    try {
-                        sendReply(new InetSocketAddress(query.getAddress(), query.getPort()), replyMessage);
-                    } catch (IOException e) {
-                        System.err.println("Couldn't send the reply: " + e.getMessage());
-                    }
-                } catch (IOException e) {
-                    System.err.println("Couldn't get a query: " + e.getMessage());
-                }
+    private void listen()  {
+        DatagramPacket packet = new DatagramPacket(new byte[receiveBufferSize], receiveBufferSize);
+        while (!Thread.currentThread().isInterrupted()) {
+            try {
+                socket.receive(packet);
+                workers.submit(new Worker(new InetSocketAddress(packet.getAddress(), packet.getPort()), new String(packet.getData(), 0, packet.getLength())));
+            } catch (IOException e) {
+                System.err.println("Couldn't get a query: " + e.getMessage());
             }
         }
+    }
 
-        private DatagramPacket getQuery() throws IOException {
-            DatagramPacket query = new DatagramPacket(new byte[receiveBufferSize], receiveBufferSize);
-            socket.receive(query);
-            return query;
+    private class Worker implements Runnable {
+        private final InetSocketAddress address;
+        private final String request;
+
+        private Worker(InetSocketAddress address, String request) {
+            this.address = address;
+            this.request = request;
+        }
+
+        @Override
+        public void run() {
+            String replyMessage = "Hello, " + request;
+            try {
+                sendReply(address, replyMessage);
+            } catch (IOException e) {
+                System.err.println("Couldn't send the reply: " + e.getMessage());
+            }
         }
 
         private void sendReply(InetSocketAddress address, String replyMessage) throws IOException {
