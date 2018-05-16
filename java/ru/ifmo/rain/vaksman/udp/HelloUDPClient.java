@@ -19,27 +19,21 @@ public class HelloUDPClient implements HelloClient {
         if (threads <= 0 || port < 0 || port > 65535) {
             throw new IllegalArgumentException("Amount of threads or port's number is incorrect");
         }
-        try {
-            serverAddress = new InetSocketAddress(InetAddress.getByName(host), port);
-        } catch (UnknownHostException e) {
-            System.err.println("Couldn't find IP address for the specified host: " + e.getMessage());
-            return;
-        }
+        serverAddress = new InetSocketAddress(host, port);
         senders = Executors.newFixedThreadPool(threads);
-        List<Future> res = new ArrayList<>();
-        for (int i = 0; i < threads; ++i) {
-            res.add(senders.submit(new Sender(i, requests, prefix)));
+        for (int i = 0; i < threads; i++) {
+            senders.submit(new Sender(i, requests, prefix));
         }
-        res.forEach(x -> {
-            try {
-                x.get();
-            } catch (InterruptedException e) {
-                System.err.println("The task interrupted: " + e.getMessage());
-            } catch (ExecutionException e) {
-                System.err.println("Exception during computation occurred: " + e.getMessage());
+        senders.shutdown();
+        try {
+            if (!senders.awaitTermination(5, TimeUnit.MINUTES)) {
+                System.err.println("It's not terminated during 5 minutes - shutdown");
+                senders.shutdownNow();
             }
-        });
-        senders.shutdownNow();
+        } catch (InterruptedException e) {
+            System.err.println("Interrupted during waiting of termination - shutdown: " + e.getMessage());
+            senders.shutdownNow();
+        }
     }
 
     private class Sender implements Runnable {
@@ -49,6 +43,7 @@ public class HelloUDPClient implements HelloClient {
         private int receiveBufferSize;
         private int sendBufferSize;
         private DatagramSocket socket;
+        private DatagramPacket packet;
 
         private Sender(int number, int requests, String queryPref) {
             this.number = number;
@@ -59,12 +54,14 @@ public class HelloUDPClient implements HelloClient {
         @Override
         public void run() {
             try (DatagramSocket socket = new DatagramSocket()) {
-                socket.setSoTimeout(5000);
+                socket.setSoTimeout(1000);
                 receiveBufferSize = socket.getReceiveBufferSize();
                 sendBufferSize = socket.getSendBufferSize();
                 this.socket = socket;
+                this.packet = new DatagramPacket(new byte[receiveBufferSize], receiveBufferSize);
                 for (int i = 0; i < requests; i++) {
-                    String query = queryPref + number + "_" + i, reply = "";
+                    String query = queryPref + number + "_" + i;
+                    String reply = "";
                     do {
                         try {
                             sendQuery(serverAddress, query);
@@ -89,9 +86,8 @@ public class HelloUDPClient implements HelloClient {
         }
 
         private String receiveReply() throws IOException {
-            DatagramPacket reply = new DatagramPacket(new byte[receiveBufferSize], receiveBufferSize);
-            socket.receive(reply);
-            return new String(reply.getData(), 0, reply.getLength());
+            socket.receive(packet);
+            return new String(packet.getData(), 0, packet.getLength());
         }
 
         private boolean isProcessed(String query, String reply) {
