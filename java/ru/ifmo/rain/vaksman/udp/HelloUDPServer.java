@@ -1,16 +1,16 @@
 package ru.ifmo.rain.vaksman.udp;
 
 import info.kgeorgiy.java.advanced.hello.HelloServer;
+import info.kgeorgiy.java.advanced.hello.Util;
 
 import java.io.IOException;
 import java.net.*;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 public class HelloUDPServer implements HelloServer {
+    static final int MAX_SIZE = 100000;
     private DatagramSocket socket;
     private ExecutorService workers;
     private ExecutorService listener;
@@ -35,24 +35,38 @@ public class HelloUDPServer implements HelloServer {
             System.err.println("UDP error occurred: " + e.getMessage());
             return;
         }
+        workers = new ThreadPoolExecutor(
+                threads,
+                threads,
+                0, TimeUnit.SECONDS,
+                new ArrayBlockingQueue<>(MAX_SIZE),
+                new ThreadPoolExecutor.DiscardPolicy());
         listener = Executors.newSingleThreadExecutor();
-        workers = Executors.newFixedThreadPool(threads);
         listener.submit(this::listen);
     }
 
     @Override
     public void close() {
-        workers.shutdownNow();
         listener.shutdownNow();
+        workers.shutdown();
+        try {
+            if (!workers.awaitTermination(5, TimeUnit.SECONDS)) {
+                System.err.println("Server has not terminated during 5 seconds - shutdown");
+                workers.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            System.err.println("Interrupted exception occurred during waiting for termination - shutdown: " + e.getMessage());
+            workers.shutdownNow();
+        }
         socket.close();
     }
 
-    private void listen()  {
+    private void listen() {
         DatagramPacket packet = new DatagramPacket(new byte[receiveBufferSize], receiveBufferSize);
         while (!Thread.currentThread().isInterrupted()) {
             try {
                 socket.receive(packet);
-                workers.submit(new Worker(new InetSocketAddress(packet.getAddress(), packet.getPort()), new String(packet.getData(), 0, packet.getLength())));
+                workers.submit(new Worker(packet.getSocketAddress(), new String(packet.getData(), 0, packet.getLength())));
             } catch (IOException e) {
                 System.err.println("Couldn't get a query: " + e.getMessage());
             }
@@ -60,10 +74,10 @@ public class HelloUDPServer implements HelloServer {
     }
 
     private class Worker implements Runnable {
-        private final InetSocketAddress address;
+        private final SocketAddress address;
         private final String request;
 
-        private Worker(InetSocketAddress address, String request) {
+        private Worker(SocketAddress address, String request) {
             this.address = address;
             this.request = request;
         }
@@ -78,8 +92,8 @@ public class HelloUDPServer implements HelloServer {
             }
         }
 
-        private void sendReply(InetSocketAddress address, String replyMessage) throws IOException {
-            byte[] bytes = replyMessage.getBytes();
+        private void sendReply(SocketAddress address, String replyMessage) throws IOException {
+            byte[] bytes = replyMessage.getBytes(Util.CHARSET);
             if (bytes.length > sendBufferSize) {
                 throw new IOException("The message is too large");
             }
