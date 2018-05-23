@@ -3,12 +3,16 @@ package ru.ifmo.rain.vaksman.udp;
 import info.kgeorgiy.java.advanced.hello.HelloClient;
 
 import java.io.IOException;
-import java.net.*;
-import java.util.ArrayList;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 public class HelloUDPClient implements HelloClient {
     private ExecutorService senders;
@@ -91,9 +95,8 @@ public class HelloUDPClient implements HelloClient {
         }
 
         private boolean isProcessed(String query, String reply) {
-            return !reply.equals(query) && reply.contains(query);
+            return reply.matches(".*" + Pattern.quote(query) + "(|\\p{Space}.*)");
         }
-
     }
 
     public static void main(String[] args) {
