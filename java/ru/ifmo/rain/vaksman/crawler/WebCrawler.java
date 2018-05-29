@@ -1,33 +1,39 @@
 package ru.ifmo.rain.vaksman.crawler;
 
-import info.kgeorgiy.java.advanced.crawler.Crawler;
-import info.kgeorgiy.java.advanced.crawler.Document;
-import info.kgeorgiy.java.advanced.crawler.Downloader;
-import info.kgeorgiy.java.advanced.crawler.Result;
+import info.kgeorgiy.java.advanced.crawler.*;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.*;
 
 import static info.kgeorgiy.java.advanced.crawler.URLUtils.getHost;
 
 public class WebCrawler implements Crawler {
-    private final Downloader downloader;
-    private final ExecutorService downloaders;
-    private final ExecutorService extractors;
-    private final int perHost;
+    private Downloader downloader;
+    private ExecutorService downloaders;
+    private ExecutorService extractors;
+    private int perHost;
+
+    public WebCrawler(Downloader downloader) {
+        this(downloader, 1, 1, 1);
+    }
+
+    public WebCrawler(Downloader downloader, int downloaders) {
+        this(downloader, downloaders, 1, downloaders);
+    }
+
+    public WebCrawler(Downloader downloader, int downloaders, int extractors) {
+        this(downloader, downloaders, extractors, downloaders);
+    }
 
     public WebCrawler(Downloader downloader, int downloaders, int extractors, int perHost) {
         if (downloader == null || downloaders < 1 || extractors < 1 || perHost < 1) {
             throw new IllegalArgumentException("One of given arguments is incorrect");
         }
         this.downloader = downloader;
-        this.downloaders = Executors.newFixedThreadPool(Integer.min(Runtime.getRuntime().availableProcessors(), downloaders));
-        this.extractors = Executors.newFixedThreadPool(Integer.min(Runtime.getRuntime().availableProcessors(), extractors));
+        this.downloaders = Executors.newFixedThreadPool(downloaders);
+        this.extractors = Executors.newFixedThreadPool(extractors);
         this.perHost = perHost;
     }
 
@@ -123,13 +129,14 @@ public class WebCrawler implements Crawler {
                 errors.put(url, e);
             } finally {
                 phaser.arrive();
-                String host = null; //this url is got from Document::extractLinks -> assume that's correct
+                String host; //this url is got from Document::extractLinks -> assume that's correct
                 try {
                     host = getHost(url);
-                } catch (MalformedURLException impossible) {
-                    System.err.println("IMPOSSIBLE");
+                } catch (MalformedURLException e) {
+                    RuntimeException exception = new RuntimeException("IMPOSSIBLE");
+                    exception.addSuppressed(e);
+                    throw exception;
                 }
-                assert host != null;
                 Runnable downloadTask = hosts.get(host).getTask();
                 if (downloadTask != null) {
                     downloaders.submit(downloadTask);
@@ -186,5 +193,43 @@ public class WebCrawler implements Crawler {
                 phaser.arrive();
             }
         }
+    }
+
+    public static void main(String[] args) { //url depth downloads extrs perHost
+        if (args == null || args.length < 1 || args.length > 5 || Arrays.stream(args).anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException("Incorrect input format.\nUsage: WebCrawler url [depth [downloaders [extractors [perHost]]]]");
+        }
+        int[] parameters = new int[args.length - 1];
+        try {
+            for (int i = 1; i < args.length; i++) {
+                parameters[i - 1] = Integer.parseInt(args[i]);
+            }
+        } catch (NumberFormatException e) {
+            IllegalArgumentException exception = new IllegalArgumentException("Integer arguments expected: " + e.getMessage());
+            exception.addSuppressed(e);
+            throw exception;
+        }
+        WebCrawler crawler = null;
+        try {
+            switch (args.length) {
+                case 1:
+                case 2:
+                    crawler = new WebCrawler(new CachingDownloader());
+                    break;
+                case 3:
+                    crawler = new WebCrawler(new CachingDownloader(), parameters[1]);
+                    break;
+                case 4:
+                    crawler = new WebCrawler(new CachingDownloader(), parameters[1], parameters[2]);
+                    break;
+                case 5:
+                    crawler = new WebCrawler(new CachingDownloader(), parameters[1], parameters[2], parameters[3]);
+                    break;
+            }
+        } catch (IOException e) {
+            System.err.println("Couldn't create crawler: " + e.getMessage());
+            return;
+        }
+        Objects.requireNonNull(crawler).download(args[0], (args.length > 1 ? parameters[0] : 1));
     }
 }
