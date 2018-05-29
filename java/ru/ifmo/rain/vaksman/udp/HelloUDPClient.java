@@ -7,6 +7,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
@@ -20,7 +21,7 @@ public class HelloUDPClient implements HelloClient {
 
     @Override
     public void run(String host, int port, String prefix, int threads, int requests) {
-        if (threads <= 0 || port < 0 || port > 65535) {
+        if (threads <= 0 || port < 0) {
             throw new IllegalArgumentException("Amount of threads or port's number is incorrect");
         }
         serverAddress = new InetSocketAddress(host, port);
@@ -82,16 +83,16 @@ public class HelloUDPClient implements HelloClient {
         }
 
         private void sendQuery(InetSocketAddress address, String message) throws IOException {
-            if (message.getBytes().length > sendBufferSize) {
+            if (message.getBytes(StandardCharsets.UTF_8).length > sendBufferSize) {
                 throw new IOException("The message is too large");
             }
-            DatagramPacket query = new DatagramPacket(message.getBytes(), message.getBytes().length, address);
+            DatagramPacket query = new DatagramPacket(message.getBytes(StandardCharsets.UTF_8), message.getBytes(StandardCharsets.UTF_8).length, address);
             socket.send(query);
         }
 
         private String receiveReply() throws IOException {
             socket.receive(packet);
-            return new String(packet.getData(), 0, packet.getLength());
+            return new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
         }
 
         private boolean isProcessed(String query, String reply) {

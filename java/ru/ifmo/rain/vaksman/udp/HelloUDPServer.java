@@ -1,10 +1,10 @@
 package ru.ifmo.rain.vaksman.udp;
 
 import info.kgeorgiy.java.advanced.hello.HelloServer;
-import info.kgeorgiy.java.advanced.hello.Util;
 
 import java.io.IOException;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.*;
@@ -66,7 +66,7 @@ public class HelloUDPServer implements HelloServer {
         while (!Thread.currentThread().isInterrupted()) {
             try {
                 socket.receive(packet);
-                workers.submit(new Worker(packet.getSocketAddress(), new String(packet.getData(), 0, packet.getLength())));
+                workers.submit(new Worker(packet.getSocketAddress(), new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8)));
             } catch (IOException e) {
                 System.err.println("Couldn't get a query: " + e.getMessage());
             }
@@ -93,7 +93,7 @@ public class HelloUDPServer implements HelloServer {
         }
 
         private void sendReply(SocketAddress address, String replyMessage) throws IOException {
-            byte[] bytes = replyMessage.getBytes(Util.CHARSET);
+            byte[] bytes = replyMessage.getBytes(StandardCharsets.UTF_8);
             if (bytes.length > sendBufferSize) {
                 throw new IOException("The message is too large");
             }
