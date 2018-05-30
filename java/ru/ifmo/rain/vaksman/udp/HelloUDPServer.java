@@ -10,7 +10,7 @@ import java.util.Objects;
 import java.util.concurrent.*;
 
 public class HelloUDPServer implements HelloServer {
-    static final int MAX_SIZE = 100000;
+    static final int MAX_SIZE = 1000000;
     private DatagramSocket socket;
     private ExecutorService workers;
     private ExecutorService listener;
@@ -19,7 +19,7 @@ public class HelloUDPServer implements HelloServer {
 
     @Override
     public void start(int port, int threads) {
-        if (threads <= 0 || port < 0 || port > 65535) {
+        if (threads <= 0 || port < 0) {
             throw new IllegalArgumentException("Amount of threads or port's number is incorrect");
         }
         try {
@@ -62,11 +62,11 @@ public class HelloUDPServer implements HelloServer {
     }
 
     private void listen() {
-        DatagramPacket packet = new DatagramPacket(new byte[receiveBufferSize], receiveBufferSize);
         while (!Thread.currentThread().isInterrupted()) {
+            DatagramPacket packet = new DatagramPacket(new byte[receiveBufferSize], receiveBufferSize);
             try {
                 socket.receive(packet);
-                workers.submit(new Worker(packet.getSocketAddress(), new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8)));
+                workers.submit(new Worker(packet));
             } catch (IOException e) {
                 System.err.println("Couldn't get a query: " + e.getMessage());
             }
@@ -74,16 +74,16 @@ public class HelloUDPServer implements HelloServer {
     }
 
     private class Worker implements Runnable {
-        private final SocketAddress address;
-        private final String request;
+        private DatagramPacket packet;
 
-        private Worker(SocketAddress address, String request) {
-            this.address = address;
-            this.request = request;
+        private Worker(DatagramPacket packet) {
+            this.packet = packet;
         }
 
         @Override
         public void run() {
+            SocketAddress address = packet.getSocketAddress();
+            String request = new String(packet.getData(), 0, packet.getLength(), StandardCharsets.UTF_8);
             String replyMessage = "Hello, " + request;
             try {
                 sendReply(address, replyMessage);
